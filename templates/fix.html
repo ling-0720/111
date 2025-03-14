@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>漏洞修复</h2>
+    <div class="alert alert-info">
+        <h5>修复建议</h5>
+        <p>系统将为每个漏洞提供详细的修复建议和解决方案。</p>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>需要修复的漏洞</h5>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>漏洞ID</th>
+                        <th>漏洞名称</th>
+                        <th>修复建议</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CVE-2023-1234</td>
+                        <td>IoT设备远程代码执行漏洞</td>
+                        <td>更新固件版本至最新版本</td>
+                        <td>
+                            <button class="btn btn-sm btn-success fix-btn">修复</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

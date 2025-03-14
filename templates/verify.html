@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 漏洞验证表单 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">漏洞验证</h5>
+                </div>
+                <div class="card-body">
+                    <form id="verifyForm">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">目标漏洞</label>
+                                    <select class="form-select" id="vulnSelect">
+                                        <option value="">选择漏洞...</option>
+                                        <option value="CVE-2024-1234">CVE-2024-1234 - 远程代码执行</option>
+                                        <option value="CVE-2024-5678">CVE-2024-5678 - 认证绕过</option>
+                                        <option value="CVE-2024-9012">CVE-2024-9012 - SQL注入</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">验证方式</label>
+                                    <select class="form-select" id="verifyMethod">
+                                        <option value="auto">自动验证</option>
+                                        <option value="manual">手动验证</option>
+                                        <option value="poc">PoC验证</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary d-block w-100">
+                                        <i class="fas fa-check-circle me-2"></i>开始验证
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 验证结果列表 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">验证结果</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>漏洞编号</th>
+                                    <th>验证时间</th>
+                                    <th>验证方式</th>
+                                    <th>验证结果</th>
+                                    <th>置信度</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verifyResultsTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 模拟的验证结果数据
+const mockVerifyResults = [
+    {
+        id: 1,
+        vulnId: "CVE-2024-1234",
+        verifyTime: "2024-03-27 10:30",
+        method: "自动验证",
+        result: "已确认",
+        confidence: "95%",
+        status: "完成",
+        details: "成功复现漏洞，发现目标系统存在远程代码执行风险"
+    },
+    {
+        id: 2,
+        vulnId: "CVE-2024-5678",
+        verifyTime: "2024-03-27 11:45",
+        method: "PoC验证",
+        result: "未确认",
+        confidence: "75%",
+        status: "完成",
+        details: "目标系统可能存在认证绕过漏洞，需要进一步确认"
+    },
+    {
+        id: 3,
+        vulnId: "CVE-2024-9012",
+        verifyTime: "2024-03-27 14:20",
+        method: "手动验证",
+        result: "已确认",
+        confidence: "90%",
+        status: "完成",
+        details: "成功利用SQL注入漏洞获取数据库信息"
+    }
+];
+
+// 页面加载时显示验证结果列表
+document.addEventListener('DOMContentLoaded', function() {
+    updateVerifyResultsTable(mockVerifyResults);
+});
+
+// 处理验证表单提交
+document.getElementById('verifyForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const vulnId = document.getElementById('vulnSelect').value;
+    const method = document.getElementById('verifyMethod').value;
+    
+    // 创建新的验证结果
+    const newResult = {
+        id: mockVerifyResults.length + 1,
+        vulnId: vulnId,
+        verifyTime: new Date().toLocaleString(),
+        method: document.getElementById('verifyMethod').options[document.getElementById('verifyMethod').selectedIndex].text,
+        result: Math.random() > 0.3 ? "已确认" : "未确认",
+        confidence: Math.floor(Math.random() * 30 + 70) + "%",
+        status: "进行中",
+        details: "正在验证漏洞..."
+    };
+    
+    // 添加到列表并更新显示
+    mockVerifyResults.unshift(newResult);
+    updateVerifyResultsTable(mockVerifyResults);
+    
+    // 模拟验证完成
+    setTimeout(() => {
+        newResult.status = "完成";
+        newResult.details = `验证完成，${newResult.result}目标系统存在该漏洞`;
+        updateVerifyResultsTable(mockVerifyResults);
+    }, 3000);
+});
+
+function updateVerifyResultsTable(results) {
+    const tbody = document.getElementById('verifyResultsTable');
+    tbody.innerHTML = '';
+    
+    results.forEach(result => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${result.id}</td>
+            <td>${result.vulnId}</td>
+            <td>${result.verifyTime}</td>
+            <td>${result.method}</td>
+            <td>
+                <span class="badge bg-${result.result === '已确认' ? 'success' : 'warning'}">
+                    ${result.result}
+                </span>
+            </td>
+            <td>${result.confidence}</td>
+            <td>
+                <span class="badge bg-${result.status === '完成' ? 'success' : 'info'}">
+                    ${result.status}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewVerifyDetails(${result.id})">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="reVerify(${result.id})">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteVerifyResult(${result.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function viewVerifyDetails(id) {
+    const result = mockVerifyResults.find(r => r.id === id);
+    alert(`验证详情:\n${result.details}`);
+}
+
+function reVerify(id) {
+    alert(`重新验证 ID: ${id}`);
+}
+
+function deleteVerifyResult(id) {
+    if (confirm(`确定要删除验证结果 ID: ${id} 吗？`)) {
+        const index = mockVerifyResults.findIndex(result => result.id === id);
+        if (index !== -1) {
+            mockVerifyResults.splice(index, 1);
+            updateVerifyResultsTable(mockVerifyResults);
+        }
+    }
+}
+</script>
+{% endblock %} 
