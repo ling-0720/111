@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+</head>
+<body>
+    <h1>登录</h1>
+    <form id="loginForm">
+        <label for="username">用户名:</label>
+        <input type="text" id="username" name="username" required><br>
+        <label for="password">密码:</label>
+        <input type="password" id="password" name="password" required><br>
+        <button type="submit">登录</button>
+    </form>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+           .then(response => response.json())
+           .then(data => {
+                if (data.message === '登录成功') {
+                    alert('登录成功');
+                    // 跳转到主页或其他页面
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

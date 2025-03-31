@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 报告生成表单 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">生成报告</h5>
+                </div>
+                <div class="card-body">
+                    <form id="reportForm">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">报告类型</label>
+                                    <select class="form-select" id="reportType">
+                                        <option value="full">完整报告</option>
+                                        <option value="summary">摘要报告</option>
+                                        <option value="technical">技术报告</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">时间范围</label>
+                                    <select class="form-select" id="timeRange">
+                                        <option value="today">今天</option>
+                                        <option value="week">最近一周</option>
+                                        <option value="month">最近一月</option>
+                                        <option value="custom">自定义</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary d-block w-100">
+                                        <i class="fas fa-file-alt me-2"></i>生成报告
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报告列表 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">报告列表</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>报告类型</th>
+                                    <th>生成时间</th>
+                                    <th>目标范围</th>
+                                    <th>漏洞数量</th>
+                                    <th>风险等级分布</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 模拟的报告数据
+const mockReports = [
+    {
+        id: 1,
+        type: "完整报告",
+        generateTime: "2024-03-27 10:30",
+        target: "192.168.1.0/24",
+        vulnCount: 15,
+        riskDistribution: {high: 5, medium: 7, low: 3},
+        status: "已完成"
+    },
+    {
+        id: 2,
+        type: "摘要报告",
+        generateTime: "2024-03-27 11:45",
+        target: "192.168.2.0/24",
+        vulnCount: 8,
+        riskDistribution: {high: 2, medium: 4, low: 2},
+        status: "已完成"
+    },
+    {
+        id: 3,
+        type: "技术报告",
+        generateTime: "2024-03-27 14:20",
+        target: "192.168.3.0/24",
+        vulnCount: 12,
+        riskDistribution: {high: 4, medium: 5, low: 3},
+        status: "生成中"
+    },
+    // ... 继续添加更多模拟数据 ...
+];
+
+// 页面加载时显示报告列表
+document.addEventListener('DOMContentLoaded', function() {
+    updateReportsTable(mockReports);
+});
+
+// 处理报告生成表单提交
+document.getElementById('reportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const reportType = document.getElementById('reportType').value;
+    const timeRange = document.getElementById('timeRange').value;
+    
+    // 创建新的报告记录
+    const newReport = {
+        id: mockReports.length + 1,
+        type: document.getElementById('reportType').options[document.getElementById('reportType').selectedIndex].text,
+        generateTime: new Date().toLocaleString(),
+        target: "192.168.1.0/24",
+        vulnCount: Math.floor(Math.random() * 20) + 1,
+        riskDistribution: {
+            high: Math.floor(Math.random() * 5),
+            medium: Math.floor(Math.random() * 7),
+            low: Math.floor(Math.random() * 4)
+        },
+        status: "生成中"
+    };
+    
+    // 添加到列表并更新显示
+    mockReports.unshift(newReport);
+    updateReportsTable(mockReports);
+    
+    // 模拟报告生成完成
+    setTimeout(() => {
+        newReport.status = "已完成";
+        updateReportsTable(mockReports);
+    }, 3000);
+});
+
+function updateReportsTable(reports) {
+    const tbody = document.getElementById('reportsTable');
+    tbody.innerHTML = '';
+    
+    reports.forEach(report => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${report.id}</td>
+            <td>${report.type}</td>
+            <td>${report.generateTime}</td>
+            <td>${report.target}</td>
+            <td>${report.vulnCount}</td>
+            <td>
+                <span class="badge bg-danger me-1">高:${report.riskDistribution.high}</span>
+                <span class="badge bg-warning me-1">中:${report.riskDistribution.medium}</span>
+                <span class="badge bg-success">低:${report.riskDistribution.low}</span>
+            </td>
+            <td>
+                <span class="badge bg-${report.status === '已完成' ? 'success' : 'warning'}">
+                    ${report.status}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="downloadReport(${report.id})">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteReport(${report.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function viewReport(id) {
+    alert(`查看报告 ID: ${id}`);
+}
+
+function downloadReport(id) {
+    alert(`下载报告 ID: ${id}`);
+}
+
+function deleteReport(id) {
+    if (confirm(`确定要删除报告 ID: ${id} 吗？`)) {
+        const index = mockReports.findIndex(report => report.id === id);
+        if (index !== -1) {
+            mockReports.splice(index, 1);
+            updateReportsTable(mockReports);
+        }
+    }
+}
+</script>
+{% endblock %} 
