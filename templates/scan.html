@@ -30,10 +30,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="mb-3">
-                                    <label class="form-label">&nbsp;</label>
-                                    <button type="submit" class="btn btn-primary d-block w-100">
-                                        <i class="fas fa-search me-2"></i>开始扫描
-                                    </button>
+                                    <button type="submit" class="btn btn-primary mt-4">开始扫描</button>
                                 </div>
                             </div>
                         </div>
@@ -47,49 +44,39 @@
     <div class="row" id="scanProgress" style="display: none;">
         <div class="col-12">
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">扫描进度</h5>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-secondary">暂停</button>
-                        <button class="btn btn-sm btn-outline-danger">停止</button>
-                    </div>
-                </div>
                 <div class="card-body">
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 75%">75%</div>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
-                    <div class="small text-muted" id="scanStatus">正在扫描...</div>
+                    <p class="mt-2" id="scanStatus"></p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 扫描结果表格 -->
+    <!-- 扫描结果 -->
     <div class="row" id="scanResults" style="display: none;">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card mb-4">
+                <div class="card-header">
                     <h5 class="card-title mb-0">扫描结果</h5>
-                    <button class="btn btn-primary btn-sm" onclick="generateReport()">
-                        <i class="fas fa-file-alt me-2"></i>生成报告
-                    </button>
+                    <button class="btn btn-sm btn-primary float-end" onclick="generateReport()">生成报告</button>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-bordered" id="vulnTable">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>漏洞ID</th>
                                     <th>漏洞名称</th>
-                                    <th>风险等级</th>
-                                    <th>影响设备</th>
-                                    <th>发现时间</th>
+                                    <th>严重程度</th>
+                                    <th>受影响设备</th>
+                                    <th>发现日期</th>
                                     <th>状态</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
-                            <tbody id="resultsTable">
+                            <tbody id="vulnTableBody">
                             </tbody>
                         </table>
                     </div>
@@ -102,88 +89,97 @@
 
 {% block extra_js %}
 <script>
-// 模拟的漏洞数据
-const mockVulnerabilities = [
-    {
-        id: 1,
-        name: "CVE-2024-1234",
-        severity: "高危",
-        affected_device: "智能摄像头",
-        discovery_date: "2024-03-27",
-        status: "未修复"
-    },
-    {
-        id: 2,
-        name: "CVE-2024-5678",
-        severity: "中危",
-        affected_device: "智能门锁",
-        discovery_date: "2024-03-27",
-        status: "修复中"
-    },
-    {
-        id: 3,
-        name: "CVE-2024-9012",
-        severity: "低危",
-        affected_device: "智能音箱",
-        discovery_date: "2024-03-27",
-        status: "已修复"
+// 动态生成随机漏洞数据的函数
+function generateRandomVulnerabilities() {
+    const severityLevels = ["高危", "中危", "低危"];
+    const devices = ["企业服务器", "Web应用", "数据库集群", "物联网设备", "工业控制系统"];
+    const count = Math.floor(Math.random() * 5) + 2; // 生成2-6个漏洞
+    const vulnerabilities = [];
+
+    for (let i = 0; i < count; i++) {
+        // 生成符合真实CVE格式的编号（5位数字，年份2023-2024）
+        const cveYear = Math.random() < 0.5 ? 2023 : 2024;
+        const cveNumber = String(Math.floor(Math.random() * 90000) + 10000).padStart(5, '0'); // 5位数字
+        const cveId = `CVE-${cveYear}-${cveNumber}`;
+
+        // 生成更真实的漏洞ID（与CVE编号关联）
+        const vulnId = `VULN-${cveYear}-${String(Math.floor(Math.random() * 90000) + 10000).padStart(5, '0')}`;
+
+        const severity = severityLevels[Math.floor(Math.random() * severityLevels.length)];
+        const device = devices[Math.floor(Math.random() * devices.length)];
+        const discoveryDate = generateRealisticDate(); // 过去1年内的真实日期
+        const status = getRealisticStatus(severity); // 合理的状态概率分布
+
+        vulnerabilities.push({
+            id: vulnId,
+            name: `${cveId} `, // 去掉具体类型，保留通用描述
+            severity: severity,
+            affected_device: device,
+            discovery_date: discoveryDate,
+            status: status
+        });
     }
-];
-
-document.getElementById('scanForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // 显示进度条
-    document.getElementById('scanProgress').style.display = 'block';
-    document.getElementById('scanStatus').textContent = '正在扫描...';
-    
-    // 模拟扫描过程
-    setTimeout(() => {
-        // 更新扫描状态
-        document.getElementById('scanStatus').textContent = 
-            `扫描完成 - 发现 ${mockVulnerabilities.length} 个漏洞`;
-        
-        // 显示结果表格
-        document.getElementById('scanResults').style.display = 'block';
-        
-        // 更新结果表格
-        updateResultsTable(mockVulnerabilities);
-    }, 2000); // 2秒后显示结果
-});
-
-function updateResultsTable(vulnerabilities) {
-    const tbody = document.getElementById('resultsTable');
-    tbody.innerHTML = '';
-    
-    vulnerabilities.forEach(vuln => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${vuln.id}</td>
-            <td>${vuln.name}</td>
-            <td><span class="badge bg-${getBadgeColor(vuln.severity)}">${vuln.severity}</span></td>
-            <td>${vuln.affected_device}</td>
-            <td>${vuln.discovery_date}</td>
-            <td>${vuln.status}</td>
-            <td>
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${vuln.id})">
-                        <i class="fas fa-info-circle"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-success" onclick="verifyVuln(${vuln.id})">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-warning" onclick="exploitVuln(${vuln.id})">
-                        <i class="fas fa-bug"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+    return vulnerabilities;
 }
 
-function getBadgeColor(severity) {
-    switch(severity) {
+// 生成过去1年内的真实日期（格式：YYYY-MM-DD）
+function generateRealisticDate() {
+    const today = new Date();
+    const daysAgo = Math.floor(Math.random() * 365); // 过去1年
+    today.setDate(today.getDate() - daysAgo);
+    return today.toISOString().split('T')[0];
+}
+
+// 根据严重程度设置合理的状态概率（符合真实修复逻辑）
+function getRealisticStatus(severity) {
+    const random = Math.random();
+    if (severity === '高危') {
+        return random < 0.15 ? '已修复' : random < 0.45 ? '修复中' : '未修复'; // 高危漏洞修复率更低
+    } else if (severity === '中危') {
+        return random < 0.3 ? '已修复' : random < 0.7 ? '修复中' : '未修复';
+    } else {
+        return random < 0.6 ? '已修复' : random < 0.9 ? '修复中' : '未修复'; // 低危修复率较高
+    }
+}
+
+// 扫描表单提交事件（其他逻辑保持不变）
+document.getElementById('scanForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    document.getElementById('scanProgress').style.display = 'block';
+    document.getElementById('scanStatus').textContent = '正在扫描...';
+    document.getElementById('scanResults').style.display = 'none';
+
+    setTimeout(() => {
+        const mockVulnerabilities = generateRandomVulnerabilities();
+
+        document.getElementById('scanStatus').textContent =
+            `扫描完成 - 发现 ${mockVulnerabilities.length} 个漏洞`;
+
+        document.getElementById('scanResults').style.display = 'block';
+
+        const tbody = document.getElementById('vulnTableBody');
+        tbody.innerHTML = mockVulnerabilities.map(vuln => `
+            <tr>
+                <td>${vuln.id}</td>
+                <td>${vuln.name}</td>
+                <td><span class="badge bg-${getSeverityColor(vuln.severity)}">${vuln.severity}</span></td>
+                <td>${vuln.affected_device}</td>
+                <td>${vuln.discovery_date}</td>
+                <td>${vuln.status}</td>
+                <td>
+                    <button class="btn btn-sm btn-info" onclick="viewDetails('${vuln.id}')">详情</button>
+                    <button class="btn btn-sm btn-warning" onclick="verifyVuln('${vuln.id}')">验证</button>
+                    <button class="btn btn-sm btn-danger" onclick="exploitVuln('${vuln.id}')">利用</button>
+                </td>
+            </tr>
+        `).join('');
+    }, 2000);
+});
+
+// 严重程度颜色映射（保持不变）
+function getSeverityColor(severity) {
+    switch (severity) {
         case '高危': return 'danger';
         case '中危': return 'warning';
         case '低危': return 'success';
@@ -191,6 +187,7 @@ function getBadgeColor(severity) {
     }
 }
 
+// 其他事件处理函数（alert部分保持不变）
 function viewDetails(id) {
     alert(`查看漏洞详情 ID: ${id}`);
 }
@@ -207,4 +204,4 @@ function generateReport() {
     alert('生成扫描报告');
 }
 </script>
-{% endblock %} 
+{% endblock %}
