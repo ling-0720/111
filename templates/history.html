@@ -1,34 +1,53 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <h2>历史记录</h2>
-    <div class="card mb-4">
+<div class="container mt-4">
+    <h2>扫描历史记录</h2>
+    <div class="card">
         <div class="card-body">
-            <h5>扫描历史</h5>
-            <table class="table">
+            <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>时间</th>
-                        <th>目标</th>
+                        <th>扫描时间</th>
+                        <th>目标地址</th>
+                        <th>扫描类型</th>
                         <th>发现漏洞数</th>
                         <th>状态</th>
-                        <th>操作</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>2024-03-20 10:30</td>
-                        <td>192.168.1.100</td>
-                        <td>3</td>
-                        <td><span class="badge bg-success">已完成</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-info">查看详情</button>
-                        </td>
-                    </tr>
+                <tbody id="historyTable">
+                    <!-- 动态加载的记录在此渲染 -->
                 </tbody>
             </table>
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 页面加载时加载历史记录
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/api/history/list');
+        const records = await response.json();
+        const tbody = document.getElementById('historyTable');
+
+        // 渲染每条记录
+        records.forEach(record => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${record.timestamp}</td>
+                    <td>${record.target}</td>
+                    <td>${record.scan_type}</td>
+                    <td>${record.vulnerabilities_found}</td>
+                    <td><span class="badge bg-${record.status === '完成' ? 'success' : 'warning'}">${record.status}</span></td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error('加载历史记录失败:', error);
+    }
+});
+</script>
+{% endblock %}
