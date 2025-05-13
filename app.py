@@ -1,21 +1,19 @@
+import json
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime, timedelta
 import random
+import sqlite3
 import time
-# from backend.scanners.nmap_scanner import NmapScanner
-# from backend.verifiers.metasploit_verifier import MetasploitVerifier
-# from backend.exploiters.metasploit_exploiter import MetasploitExploiter
-# from backend.fixers.auto_fixer import AutoFixer
-# from backend.config import SCAN_CONFIG, METASPLOIT_CONFIG
+from backend.history_manager import HistoryManager
+from backend.scanners.nmap_scanner import NmapScanner
 from config.config import *
+import logging
 
 app = Flask(__name__)
-
-# 注释掉扫描器初始化
-# scanner = NmapScanner(SCAN_CONFIG)
-# verifier = MetasploitVerifier(METASPLOIT_CONFIG)
-# exploiter = MetasploitExploiter(METASPLOIT_CONFIG)
-# fixer = AutoFixer()
+# 初始化 HistoryManager
+history_manager = HistoryManager()
+# 初始化 NmapScanner
+scanner = NmapScanner(SCAN_CONFIG)
 
 # 模拟的漏洞数据
 mock_vulnerabilities = [
@@ -201,73 +199,6 @@ mock_vulnerabilities = [
     }
 ]
 
-# 模拟的历史记录数据
-mock_history = [
-    {
-        "id": 1,
-        "scan_time": "2024-03-20 10:30",
-        "target": "192.168.1.100",
-        "vulnerabilities_found": 3,
-        "status": "已完成",
-        "scan_type": "完整扫描",
-        "duration": "5分钟"
-    },
-    {
-        "id": 2,
-        "scan_time": "2024-03-19 15:45",
-        "target": "192.168.1.200",
-        "vulnerabilities_found": 2,
-        "status": "已完成",
-        "scan_type": "快速扫描",
-        "duration": "2分钟"
-    },
-    {
-        "id": 3,
-        "scan_time": "2024-03-18 09:15",
-        "target": "192.168.1.150",
-        "vulnerabilities_found": 5,
-        "status": "已完成",
-        "scan_type": "漏洞扫描",
-        "duration": "8分钟"
-    },
-    {
-        "id": 4,
-        "scan_time": "2024-03-17 14:20",
-        "target": "192.168.1.300",
-        "vulnerabilities_found": 1,
-        "status": "已完成",
-        "scan_type": "快速扫描",
-        "duration": "3分钟"
-    },
-    {
-        "id": 5,
-        "scan_time": "2024-03-16 11:30",
-        "target": "192.168.1.120",
-        "vulnerabilities_found": 4,
-        "status": "已完成",
-        "scan_type": "完整扫描",
-        "duration": "6分钟"
-    },
-    {
-        "id": 6,
-        "scan_time": "2024-03-15 13:45",
-        "target": "192.168.1.130",
-        "vulnerabilities_found": 2,
-        "status": "已完成",
-        "scan_type": "快速扫描",
-        "duration": "3分钟"
-    },
-    {
-        "id": 20,
-        "scan_time": "2024-03-01 16:20",
-        "target": "192.168.1.250",
-        "vulnerabilities_found": 3,
-        "status": "已完成",
-        "scan_type": "漏洞扫描",
-        "duration": "7分钟"
-    }
-]
-
 # 模拟的修复建议数据
 mock_fixes = [
     {
@@ -376,29 +307,71 @@ def report():
 
 @app.route('/history')
 def history():
-    return render_template('history.html', history=mock_history)
+    history = history_manager.get_history()  # 调用方法
+    return render_template('history.html', history=history)
+
 
 @app.route('/api/scan', methods=['POST'])
 def start_scan():
-    """启动漏洞扫描"""
     data = request.json
     target = data.get('target')
     scan_type = data.get('scan_type', 'quick')
-    
-    # 返回模拟的扫描结果
-    mock_result = {
-        'scan_id': f"SCAN_{int(time.time())}",
-        'target': target,
-        'scan_type': scan_type,
-        'start_time': datetime.now().isoformat(),
-        'status': 'completed',
-        'results': {
-            'hosts_scanned': 1,
-            'vulnerabilities_found': random.randint(1, 5),
-            'scan_duration': f"{random.randint(10, 60)}s"
-        }
-    }
-    return jsonify(mock_result)
+    scan_id = f"SCAN_{int(time.time())}"  # 生成唯一扫描ID（时间戳+随机数）
+
+    history_manager = HistoryManager()
+    try:
+        # 1. 扫描开始时记录「处理中」状态
+        history_manager.add_record({
+            "scan_id": scan_id,
+            "target_ip": target,
+            "scan_type": scan_type,
+            "status": "pending",
+            "vulnerabilities_found": 0,  # 初始为0，扫描完成后更新
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+        # 2. 模拟真实扫描过程（耗时2-5秒）
+        start_time = datetime.now()
+        time.sleep(random.randint(2, 5))  # 替换为实际扫描逻辑
+
+        # 3. 扫描完成后生成结果
+        end_time = datetime.now()
+        scan_duration = f"{(end_time - start_time).seconds}秒"
+        found_vulns = [  # 模拟漏洞数据（实际从扫描器获取）
+            {"id": f"VULN-{i}", "type": "SQL注入", "severity": "高危"}
+            for i in range(random.randint(1, 5))
+        ]
+
+        # 4. 更新历史记录为「完成」状态
+        history_manager.update_record(scan_id, {
+            "status": "completed",
+            "vulnerabilities_found": len(found_vulns),
+            "scan_duration": scan_duration,
+            "vuln_details": json.dumps(found_vulns),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # 更新为完成时间
+        })
+
+        return jsonify({
+            "status": "success",
+            "scan_id": scan_id,
+            "results": {"vulns": found_vulns, "duration": scan_duration}
+        })
+
+    except Exception as e:
+        # 扫描失败时记录错误信息
+        history_manager.update_record(scan_id, {
+            "status": "failed",
+            "error_message": str(e)
+        })
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/scan/record', methods=['POST'])
+def record_scan_result():
+    data = request.json
+    scan_id = f"SCAN_{int(datetime.now().timestamp())}"
+    data["scan_id"] = scan_id
+    history_manager.add_record(data)
+    return jsonify({"message": "扫描记录保存成功", "scan_id": scan_id})
 
 @app.route('/api/verify/<vuln_id>', methods=['POST'])
 def verify_vulnerability(vuln_id):
@@ -469,27 +442,81 @@ def get_reports():
         reports.append(report)
     return jsonify(reports)
 
+
+# app.py（添加历史记录列表接口）
 @app.route('/api/history/list', methods=['GET'])
+def get_history_list():
+    # 从请求参数中获取分页信息（默认page=1，每页10条）
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+    offset = (page - 1) * per_page  # 计算偏移量
+
+    # 调用 HistoryManager 的 get_history 方法
+    history_manager = HistoryManager()
+    records = history_manager.get_history(limit=per_page, offset=offset)
+
+    # 转换为前端需要的格式（可选）
+    formatted_records = [{
+        "scan_id": rec["scan_id"],
+        "timestamp": rec["timestamp"],
+        "target_ip": rec["target_ip"],
+        "scan_type": rec["scan_type"],
+        "vulnerabilities_found": rec["vulnerabilities_found"],
+        "status": rec["status"],
+        "scan_duration": rec.get("scan_duration", "N/A")
+    } for rec in records]
+
+    return jsonify({
+        "total": len(records),  # 实际项目中建议查询总记录数
+        "page": page,
+        "per_page": per_page,
+        "data": formatted_records
+    })
 def get_history():
-    # 生成10条历史记录数据
-    history = []
-    for i in range(10):
-        record = {
-            "id": i + 1,
-            "scan_time": (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d %H:%M"),
-            "target": f"192.168.1.{random.randint(100, 200)}",
-            "vulnerabilities_found": random.randint(1, 8),
-            "status": random.choice(["已完成", "扫描中", "已中止"]),
-            "scan_type": random.choice(["完整扫描", "快速扫描", "漏洞扫描"]),
-            "duration": f"{random.randint(2, 10)}分钟",
-            "details": {
-                "high_risk": random.randint(0, 3),
-                "medium_risk": random.randint(1, 4),
-                "low_risk": random.randint(0, 2)
-            }
-        }
-        history.append(record)
-    return jsonify(history)
+    try:
+        # 从 URL 参数获取分页信息
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        offset = (page - 1) * per_page
+
+        # 添加日志，确认参数
+        app.logger.info(f"获取历史记录: page={page}, per_page={per_page}, offset={offset}")
+
+        records = history_manager.get_history(limit=per_page, offset=offset)
+
+        # 添加日志，确认查询结果
+        app.logger.info(f"成功获取 {len(records)} 条历史记录")
+
+        return jsonify(records)
+    except Exception as e:
+        # 记录详细的错误信息
+        app.logger.error(f'获取历史记录失败: {str(e)}', exc_info=True)
+        return jsonify({
+            'error': '获取历史记录失败',
+            'details': str(e)
+        }), 500
+@app.route('/test/add_record', methods=['GET'])
+def test_add_record():
+    test_data = {
+        "scan_id": "TEST-1234",
+        "target": "127.0.0.1",
+        "scan_type": "测试扫描",
+        "found_vulnerabilities": [{"id": "TEST-001", "name": "测试漏洞"}]
+    }
+
+    history_manager.add_record(test_data)
+    return "测试记录已添加"
+
+
+# 保存扫描记录接口（与前端fetch匹配）
+@app.route('/api/scan/save', methods=['POST'])
+def save_scan_record():
+    scan_data = request.get_json()
+    history_manager.add_record(scan_data)
+    return jsonify({"status": "success"})
+
+
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001) 
+    app.run(debug=True)
+
