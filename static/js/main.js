@@ -42,7 +42,7 @@ $(document).ready(function() {
     $('#scanButton').click(function() {
         showLoading();
         $(this).prop('disabled', true);
-        
+
         setTimeout(function() {
             $.ajax({
                 url: '/api/scan',
@@ -72,7 +72,7 @@ $(document).ready(function() {
     $('.verify-btn').click(function() {
         const vulnId = $(this).data('id');
         showLoading();
-        
+
         setTimeout(function() {
             $.ajax({
                 url: `/api/verify/${vulnId}`,
@@ -91,7 +91,7 @@ $(document).ready(function() {
     $('.exploit-btn').click(function() {
         const vulnId = $(this).data('id');
         showLoading();
-        
+
         setTimeout(function() {
             $.ajax({
                 url: `/api/exploit/${vulnId}`,
@@ -110,7 +110,7 @@ $(document).ready(function() {
     $('.fix-btn').click(function() {
         const vulnId = $(this).data('id');
         showLoading();
-        
+
         setTimeout(function() {
             $.ajax({
                 url: `/api/fix/${vulnId}`,
@@ -129,7 +129,7 @@ $(document).ready(function() {
     $('#generateReport').click(function() {
         const reportType = $('#reportType').val();
         showLoading();
-        
+
         setTimeout(function() {
             $('#reportContent').show();
             $('.report-section').html(`
@@ -228,38 +228,88 @@ $(document).ready(function() {
         }, 1500);
     }
 
-    // 加载历史记录
-    function loadHistory() {
-        showLoading();
-        setTimeout(function() {
-            $.ajax({
-                url: '/api/history/list',
-                method: 'GET',
-                success: function(response) {
-                    const tbody = $('#historyTable tbody');
-                    tbody.empty();
-                    response.forEach(function(record) {
-                        tbody.append(`
-                            <tr>
-                                <td>${record.scan_time}</td>
-                                <td>${record.target}</td>
-                                <td>${record.vulnerabilities_found}</td>
-                                <td><span class="badge bg-${record.status === '已完成' ? 'success' : 'primary'}">${record.status}</span></td>
-                                <td>${record.scan_type}</td>
-                                <td>${record.duration}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="showHistoryDetails(${JSON.stringify(record.details)})">查看详情</button>
-                                </td>
-                            </tr>
-                        `);
-                    });
-                },
-                complete: function() {
-                    hideLoading();
-                }
+// 加载历史记录
+$(document).ready(function() {
+    loadHistory();  // 页面加载时自动加载历史记录
+});
+
+function loadHistory() {
+    $.ajax({
+        url: '/api/history/list',
+        method: 'GET',
+        success: function(records) {
+            const tbody = $('#historyTableBody');
+            tbody.empty();  // 清空旧数据
+
+            records.forEach(record => {
+                // 根据状态渲染不同徽章样式
+                const statusClass = `status-${record.status}`;
+                const statusBadge = `<span class="status-badge ${statusClass}">${record.status}</span>`;
+
+                // 漏洞数显示（失败时显示0）
+                const vulnCount = record.status === 'failed' ? 0 : record.vulnerabilities_found;
+
+                // 动态插入表格行
+                tbody.append(`
+                    <tr>
+                        <td>${record.timestamp}</td>
+                        <td>${record.target_ip}</td>
+                        <td>${record.scan_type}</td>
+                        <td>${vulnCount}</td>
+                        <td>${statusBadge}</td>
+                        <td>${record.scan_duration || 'N/A'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="showDetails('${record.scan_id}')">
+                                查看详情
+                            </button>
+                        </td>
+                    </tr>
+                `);
             });
-        }, 1500);
-    }
+        },
+        error: function(xhr) {
+            alert(`加载历史记录失败: ${xhr.responseText}`);
+        }
+    });
+}
+
+function showDetails(scanId) {
+    // 调用详情接口获取漏洞详情（需后端实现 /api/history/detail）
+    $.ajax({
+        url: `/api/history/detail/${scanId}`,
+        method: 'GET',
+        success: function(details) {
+            // 使用 Bootstrap 模态框显示详情
+            const modalHtml = `
+                <div class="modal fade" id="detailsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">扫描详情（${scanId}）</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <h6>目标IP: ${details.target_ip}</h6>
+                                <h6>扫描类型: ${details.scan_type}</h6>
+                                <h6>扫描时长: ${details.scan_duration || 'N/A'}</h6>
+                                ${details.status === 'failed' ? 
+                                    `<div class="alert alert-danger">错误信息: ${details.error_message}</div>` :
+                                    `<h6>发现漏洞（共${details.vulnerabilities_found}个）:</h6>
+                                     <ul>${details.vuln_details.map(v => 
+                                         `<li>${v.type}（${v.severity}）: ${v.id}</li>`
+                                     ).join('')}</ul>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('body').append(modalHtml);
+            new bootstrap.Modal('#detailsModal').show();
+        }
+    });
+}
 
     // 显示验证详情
     function showVerifyDetails(details) {
@@ -279,4 +329,4 @@ $(document).ready(function() {
     } else if (window.location.pathname === '/history') {
         loadHistory();
     }
-}); 
+});
