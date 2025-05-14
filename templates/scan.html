@@ -92,7 +92,7 @@
 // 动态生成随机漏洞数据的函数
 function generateRandomVulnerabilities() {
     const severityLevels = ["高危", "中危", "低危"];
-    const devices = ["企业服务器", "Web应用", "数据库集群", "物联网设备", "工业控制系统"];
+    const devices = ["智能摄像头", "智能手表", "智能门锁", "无线路由器", "蓝牙耳机"];
     const count = Math.floor(Math.random() * 5) + 2; // 生成2-6个漏洞
     const vulnerabilities = [];
 
@@ -112,7 +112,7 @@ function generateRandomVulnerabilities() {
 
         vulnerabilities.push({
             id: vulnId,
-            name: `${cveId} `, // 去掉具体类型，保留通用描述
+            name: `${cveId} `, // 类型
             severity: severity,
             affected_device: device,
             discovery_date: discoveryDate,
@@ -130,7 +130,7 @@ function generateRealisticDate() {
     return today.toISOString().split('T')[0];
 }
 
-// 根据严重程度设置合理的状态概率（符合真实修复逻辑）
+// 根据严重程度设置合理的状态概率
 function getRealisticStatus(severity) {
     const random = Math.random();
     if (severity === '高危') {
@@ -142,22 +142,26 @@ function getRealisticStatus(severity) {
     }
 }
 
-// 扫描表单提交事件（其他逻辑保持不变）
+// 扫描表单提交事件
 document.getElementById('scanForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
+    // 显示进度条
     document.getElementById('scanProgress').style.display = 'block';
     document.getElementById('scanStatus').textContent = '正在扫描...';
     document.getElementById('scanResults').style.display = 'none';
 
+    // 模拟扫描过程（2秒后完成）
     setTimeout(() => {
+        // 生成模拟漏洞（关键恢复点）
         const mockVulnerabilities = generateRandomVulnerabilities();
 
+        // 更新扫描状态
         document.getElementById('scanStatus').textContent =
             `扫描完成 - 发现 ${mockVulnerabilities.length} 个漏洞`;
-
         document.getElementById('scanResults').style.display = 'block';
 
+        // 渲染漏洞列表（根据你的代码补充）
         const tbody = document.getElementById('vulnTableBody');
         tbody.innerHTML = mockVulnerabilities.map(vuln => `
             <tr>
@@ -167,13 +171,24 @@ document.getElementById('scanForm').addEventListener('submit', function(e) {
                 <td>${vuln.affected_device}</td>
                 <td>${vuln.discovery_date}</td>
                 <td>${vuln.status}</td>
-                <td>
-                    <button class="btn btn-sm btn-info" onclick="viewDetails('${vuln.id}')">详情</button>
-                    <button class="btn btn-sm btn-warning" onclick="verifyVuln('${vuln.id}')">验证</button>
-                    <button class="btn btn-sm btn-danger" onclick="exploitVuln('${vuln.id}')">利用</button>
-                </td>
             </tr>
         `).join('');
+
+        // 发送扫描记录到后端（关键：保存到历史记录）
+        const scanData = {
+            scan_id: `SCAN_${Date.now()}`,
+            target: document.getElementById('target').value,
+            scan_type: document.getElementById('scanType').value,
+            found_vulnerabilities: mockVulnerabilities,
+            status: '完成'
+        };
+
+        // 调用后端保存接口
+        fetch('/api/scan/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scanData)
+        });
     }, 2000);
 });
 
